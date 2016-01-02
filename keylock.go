@@ -40,19 +40,23 @@ func (self *KeyLock) Unlock(key string) {
 	self.locks[key].Unlock()
 }
 
-type RWKeyLock struct {
+func (self *KeyLock) KeyLocker(key string) sync.Locker {
+	return self.getLock(key)
+}
+
+type KeyRWLock struct {
 	giantLock sync.Mutex
 	locks     map[string]*sync.RWMutex
 }
 
-func NewRWKeyLock() *RWKeyLock {
-	return &RWKeyLock{
+func NewKeyRWLock() *KeyRWLock {
+	return &KeyRWLock{
 		giantLock: sync.Mutex{},
 		locks:     map[string]*sync.RWMutex{},
 	}
 }
 
-func (self *RWKeyLock) getLock(key string) *sync.RWMutex {
+func (self *KeyRWLock) getLock(key string) *sync.RWMutex {
 	if lock, ok := self.locks[key]; ok {
 		return lock
 	}
@@ -70,19 +74,26 @@ func (self *RWKeyLock) getLock(key string) *sync.RWMutex {
 	return lock
 }
 
-func (self *RWKeyLock) Lock(key string) {
+func (self *KeyRWLock) Lock(key string) {
 	self.getLock(key).Lock()
 }
 
-func (self *RWKeyLock) Unlock(key string) {
+func (self *KeyRWLock) Unlock(key string) {
 	self.locks[key].Unlock()
 }
 
-func (self *RWKeyLock) RLock(key string) {
+func (self *KeyRWLock) RLock(key string) {
 	self.getLock(key).RLock()
 }
 
-func (self *RWKeyLock) RUnlock(key string) {
-
+func (self *KeyRWLock) RUnlock(key string) {
 	self.locks[key].RUnlock()
+}
+
+func (self *KeyRWLock) KeyLocker(key string) sync.Locker {
+	return self.getLock(key)
+}
+
+func (self *KeyRWLock) KeyRLocker(key string) sync.Locker {
+	return self.getLock(key).RLocker()
 }

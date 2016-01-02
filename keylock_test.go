@@ -40,7 +40,7 @@ func TestKeyRWLock(t *testing.T) {
 	KEY := "hello"
 	var wait sync.WaitGroup
 	wait.Add(NGOROUTINES + 1) // 1 for the reader
-	keylock := NewRWKeyLock()
+	keylock := NewKeyRWLock()
 
 	var correctCounter int64
 
