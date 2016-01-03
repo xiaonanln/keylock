@@ -3,22 +3,25 @@ package keylock
 import "sync"
 
 type KeyLock struct {
-	giantLock sync.Mutex
+	giantLock sync.RWMutex
 	locks     map[string]*sync.Mutex
 }
 
 func NewKeyLock() *KeyLock {
 	return &KeyLock{
-		giantLock: sync.Mutex{},
+		giantLock: sync.RWMutex{},
 		locks:     map[string]*sync.Mutex{},
 	}
 }
 
 func (self *KeyLock) getLock(key string) *sync.Mutex {
+	self.giantLock.RLock()
 	if lock, ok := self.locks[key]; ok {
+		self.giantLock.RUnlock()
 		return lock
 	}
 
+	self.giantLock.RUnlock()
 	self.giantLock.Lock()
 
 	if lock, ok := self.locks[key]; ok {
@@ -45,22 +48,25 @@ func (self *KeyLock) KeyLocker(key string) sync.Locker {
 }
 
 type KeyRWLock struct {
-	giantLock sync.Mutex
+	giantLock sync.RWMutex
 	locks     map[string]*sync.RWMutex
 }
 
 func NewKeyRWLock() *KeyRWLock {
 	return &KeyRWLock{
-		giantLock: sync.Mutex{},
+		giantLock: sync.RWMutex{},
 		locks:     map[string]*sync.RWMutex{},
 	}
 }
 
 func (self *KeyRWLock) getLock(key string) *sync.RWMutex {
+	self.giantLock.RLock()
 	if lock, ok := self.locks[key]; ok {
+		self.giantLock.RUnlock()
 		return lock
 	}
 
+	self.giantLock.RUnlock()
 	self.giantLock.Lock()
 
 	if lock, ok := self.locks[key]; ok {

@@ -1,12 +1,24 @@
 package keylock
 
 import (
+	"flag"
+	"log"
+	"os"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
 )
 
+func TestMain(m *testing.M) {
+	flag.Parse()
+	log.Println("NumCPU:", runtime.NumCPU())
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	os.Exit(m.Run())
+}
+
 func TestKeyLock(t *testing.T) {
+	log.Println("TestKeyLock")
 	counters := make(map[string]int)
 	N := 1000000
 	NGOROUTINES := 10
@@ -34,6 +46,7 @@ func TestKeyLock(t *testing.T) {
 }
 
 func TestKeyRWLock(t *testing.T) {
+	log.Println("TestKeyRWLock")
 	counters := make(map[string]int)
 	N := 100000
 	NGOROUTINES := 3
