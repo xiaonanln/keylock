@@ -19,49 +19,58 @@ func TestMain(m *testing.M) {
 
 func TestKeyLock(t *testing.T) {
 	log.Println("TestKeyLock")
-	counters := make(map[string]int)
+	var accesses int32
 	N := 1000000
 	NGOROUTINES := 10
-	KEY := "hello"
+	KEYS := []string{"hello", "world", "foo", "bar", "fiz", "buz"}
 	var wait sync.WaitGroup
-	wait.Add(NGOROUTINES)
+	wait.Add(NGOROUTINES * len(KEYS))
 	keylock := NewKeyLock()
 
 	adder := func(key string, n int) {
 		for i := 0; i < n; i++ {
 			keylock.Lock(key)
-			counters[key]++
+			atomic.AddInt32(&accesses, 1)
 			keylock.Unlock(key)
 		}
 		wait.Done()
 	}
 
 	for i := 0; i < NGOROUTINES; i++ {
-		go adder(KEY, N)
+		for _, key := range KEYS {
+			go adder(key, N)
+		}
 	}
 	wait.Wait()
-	if counters[KEY] != NGOROUTINES*N {
-		t.Errorf("Counter is %d, but should be %d", counters[KEY], NGOROUTINES*N)
+	for _, key := range KEYS {
+		if accesses != int32(NGOROUTINES*N*len(KEYS)) {
+			t.Errorf("[%s] Counter is %d, but should be %d", key, accesses, NGOROUTINES*N)
+		}
 	}
 }
 
 func TestKeyRWLock(t *testing.T) {
 	log.Println("TestKeyRWLock")
-	counters := make(map[string]int)
+	counters := make(map[string]*int)
 	N := 100000
 	NGOROUTINES := 3
-	KEY := "hello"
+	KEYS := []string{"hello", "world", "foo", "bar", "fiz", "buz"}
 	var wait sync.WaitGroup
-	wait.Add(NGOROUTINES + 1) // 1 for the reader
 	keylock := NewKeyRWLock()
 
-	var correctCounter int64
+	// we can count use a buffered channel as an easy way to count how many times we've 'accessed' a key
+	correctCounters := make(map[string]chan bool)
+	for _, key := range KEYS {
+		correctCounters[key] = make(chan bool, N*NGOROUTINES)
+		zero := 0
+		counters[key] = &zero
+	}
 
 	adder := func(key string, n int) {
 		for i := 0; i < n; i++ {
 			keylock.Lock(key)
-			counters[key]++
-			atomic.AddInt64(&correctCounter, 1)
+			(*counters[key])++
+			correctCounters[key] <- true
 			keylock.Unlock(key)
 		}
 		wait.Done()
@@ -70,21 +79,31 @@ func TestKeyRWLock(t *testing.T) {
 	reader := func(key string, n int) {
 		for i := 0; i < n; i++ {
 			keylock.RLock(key)
-			c := counters[key]
-			if c != int(correctCounter) {
-				t.Errorf("Counter is %d, but should be %d", c, correctCounter)
+			c := (*counters[key])
+			if c != len(correctCounters[key]) {
+				t.Errorf("Counter is %d, but should be %d", c, len(correctCounters[key]))
 			}
 			keylock.RUnlock(key)
 		}
 		wait.Done()
 	}
 	for i := 0; i < NGOROUTINES; i++ {
-		go adder(KEY, N)
+		for _, key := range KEYS {
+			wait.Add(1)
+			go adder(key, N)
+		}
 	}
-	go reader(KEY, N)
+
+	for _, key := range KEYS {
+		wait.Add(1)
+		go reader(key, N)
+	}
 
 	wait.Wait()
-	if counters[KEY] != NGOROUTINES*N {
-		t.Errorf("Counter is %d, but should be %d", counters[KEY], NGOROUTINES*N)
+
+	for _, key := range KEYS {
+		if (*counters[key]) != NGOROUTINES*N {
+			t.Errorf("Counter is %d, but should be %d", (*counters[key]), NGOROUTINES*N)
+		}
 	}
 }

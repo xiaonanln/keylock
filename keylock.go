@@ -40,7 +40,7 @@ func (self *KeyLock) Lock(key string) {
 }
 
 func (self *KeyLock) Unlock(key string) {
-	self.locks[key].Unlock()
+	self.getLock(key).Unlock()
 }
 
 func (self *KeyLock) KeyLocker(key string) sync.Locker {
@@ -85,7 +85,7 @@ func (self *KeyRWLock) Lock(key string) {
 }
 
 func (self *KeyRWLock) Unlock(key string) {
-	self.locks[key].Unlock()
+	self.getLock(key).Unlock()
 }
 
 func (self *KeyRWLock) RLock(key string) {
@@ -93,7 +93,7 @@ func (self *KeyRWLock) RLock(key string) {
 }
 
 func (self *KeyRWLock) RUnlock(key string) {
-	self.locks[key].RUnlock()
+	self.getLock(key).RUnlock()
 }
 
 func (self *KeyRWLock) KeyLocker(key string) sync.Locker {
